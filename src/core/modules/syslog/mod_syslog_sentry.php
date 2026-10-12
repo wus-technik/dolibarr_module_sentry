@@ -369,9 +369,6 @@ class mod_syslog_sentry_core extends LogHandler {
 			],
 		];
 
-		if (!empty($_SERVER['SENTRY_ENVIRONMENT']))
-			$data['environment'] = $_SERVER['SENTRY_ENVIRONMENT'];
-
 		// Exception::getTrace doesn't store the point at where the exception
 		// was thrown, so we have to stuff it in ourselves. Ugh.
 		$trace = $exception->getTrace();
@@ -446,6 +443,8 @@ class mod_syslog_sentry_core extends LogHandler {
 			$data['timestamp'] = gmdate('Y-m-d\TH:i:s\Z');
 		if (!isset($data['level']) || !in_array($data['level'], ['debug', 'info', 'warning', 'error', 'fatal']))
 			$data['level'] = 'error';
+		if (!isset($data['environment']) && !empty($_SERVER['SENTRY_ENVIRONMENT']))
+			$data['environment'] = $_SERVER['SENTRY_ENVIRONMENT'];
 
 		// the function getallheaders() is only available when running in a web-request
 		$headers = function_exists('getallheaders') ? array_filter(getallheaders(), '\strlen') : [];
