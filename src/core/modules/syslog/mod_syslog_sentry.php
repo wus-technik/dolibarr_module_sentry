@@ -199,6 +199,11 @@ class mod_syslog_sentry_core extends LogHandler {
 	// set_error_handler
 	public function handleError($errno, $errstr, $errfile, $errline, $context = []) {
 
+		// respect @-suppression (and any error_reporting() mask) instead of reporting everything
+		if (!(error_reporting() & $errno)) {
+			return false;
+		}
+
 		// original first
 		// by default nothing
 		if ($this->_oldErrorHandler)
