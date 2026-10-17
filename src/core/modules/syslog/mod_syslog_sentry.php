@@ -125,6 +125,18 @@ class mod_syslog_sentry_core extends LogHandler {
 		return empty($error);
 	}
 
+	// Same "accepted, non-fatal" DB error codes Dolibarr core already treats as benign
+	// when running a module's SQL migration (core/lib/admin.lib.php::run_sql()).
+	private const BENIGN_DB_CODES = [
+		'DB_ERROR_TABLE_ALREADY_EXISTS',
+		'DB_ERROR_COLUMN_ALREADY_EXISTS',
+		'DB_ERROR_KEY_NAME_ALREADY_EXISTS',
+		'DB_ERROR_RECORD_ALREADY_EXISTS',
+		'DB_ERROR_NOSUCHFIELD',
+		'DB_ERROR_NOSUCHTABLE',
+		'DB_ERROR_PRIMARY_KEY_ALREADY_EXISTS',
+	];
+
 	public function export($content, $suffixinfilename = '') {
 
 		$map = [
@@ -137,6 +149,11 @@ class mod_syslog_sentry_core extends LogHandler {
 			LOG_INFO    => 'info',
 			LOG_DEBUG   => 'debug',
 		];
+
+		foreach (self::BENIGN_DB_CODES as $code) {
+			if (stripos($content['message'], $code) !== false || stripos($content['message'], 'Duplicate') !== false)
+				return;
+		}
 
 		$level = array_key_exists($content['level'], $map) ? $map[$content['level']] : 'error';
 		if (($level != 'debug') && ($level != 'info')) {
