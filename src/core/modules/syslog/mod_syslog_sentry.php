@@ -150,8 +150,19 @@ class mod_syslog_sentry_core extends LogHandler {
 			LOG_DEBUG   => 'debug',
 		];
 
+		// mysqli.class.php::query() logs up to 3 separate LOG_ERR lines per single failed
+		// query (exception message, raw SQL echo, then the error-code message); the first
+		// two are always redundant with the "SQL Error message:" line that follows in the
+		// same call, which is the one that reliably carries the DB_ERROR_* code below.
+		// Dropping them here keeps one failed query from becoming 2-3 separate Sentry issues.
+		if (strpos($content['message'], '::query Exception in query') !== false
+			|| strpos($content['message'], '::query SQL Error query:') !== false)
+			return;
+
 		foreach (self::BENIGN_DB_CODES as $code) {
-			if (stripos($content['message'], $code) !== false || stripos($content['message'], 'Duplicate') !== false)
+			if (stripos($content['message'], $code) !== false
+				|| stripos($content['message'], 'Duplicate') !== false
+				|| stripos($content['message'], 'already exists') !== false)
 				return;
 		}
 
