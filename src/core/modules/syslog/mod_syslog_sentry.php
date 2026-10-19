@@ -170,8 +170,30 @@ class mod_syslog_sentry_core extends LogHandler {
 		if (($level != 'debug') && ($level != 'info')) {
 			if (strncmp($content['message'], 'sql', 3) === 0)
 				$this->captureMessage('SQL: '.substr($content['message'], 4), $level);
-			else if (strncmp($content['message'], '---', 3) !== 0)
-				$this->captureMessage($content['message'], $level);
+			else if (strncmp($content['message'], '---', 3) !== 0) {
+				$message = $content['message'];
+				// The "SQL Error query:" line carrying the actual failing statement was
+				// dropped above as redundant noise; for a real (non-benign) DB error,
+				// reattach it here from the DB object so the failing SQL isn't lost.
+				// Quoted literals are scrubbed first: Dolibarr builds SQL by string
+				// concatenation with escaped literals (no bound params), and some of
+				// those literals are plaintext passwords/PII (e.g. user.class.php's
+				// password update when DATABASE_PWD_ENCRYPTED is off). Scrubbing also
+				// keeps the attached query shape stable across repeats of the same
+				// failure, instead of fragmenting Sentry grouping on each literal value.
+				// Note: global $db is a best-effort guess at which connection failed —
+				// a secondary DoliDB-derived connection (DB-backed sessions, an import
+				// job, a module's own second connection) can misattribute this to the
+				// wrong query; accepted tradeoff, not worth touching core DB classes for.
+				if (strpos($message, '::query SQL Error message:') !== false) {
+					global $db;
+					if (!empty($db->lastqueryerror)) {
+						$scrubbed = preg_replace("/'[^']*'/", "'?'", $db->lastqueryerror);
+						$message .= "\nQuery: ".$scrubbed;
+					}
+				}
+				$this->captureMessage($message, $level);
+			}
 		}
 	}
 
