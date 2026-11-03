@@ -238,12 +238,11 @@ class mod_syslog_sentry_core extends LogHandler {
 		if ($this->_oldExceptionHandler)
 			call_user_func($this->_oldExceptionHandler, $e);
 
+		$this->captureException($e, null, ['source' => 'sentry:handleException']);
+
 		// display error
 		if (ini_get('display_errors') == '1')
 			throw $e; // display exception formatted by PHP
-
-		// sentry after
-		$this->captureException($e, null, ['source' => 'sentry:handleException']);
 	}
 
 	// set_error_handler
