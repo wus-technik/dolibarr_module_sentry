@@ -261,12 +261,10 @@ class mod_syslog_sentry_core extends LogHandler {
 
 		$e = new ErrorException($errstr, 0, $errno, $errfile, $errline);
 
-		// display error
-		if (ini_get('display_errors') == '1')
-			throw $e; // display exception formatted by PHP
-
-		// sentry after
 		$this->captureException($e, null, ['source' => 'sentry:handleError']);
+
+		// display_errors on: let PHP print the warning itself and carry on, never turn it into a fatal
+		return ini_get('display_errors') == '1' ? false : null;
 	}
 
 	// send report(s) after fastcgi_finish_request
